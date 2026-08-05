@@ -87,11 +87,13 @@ tasks {
     defaultTasks("build")
 }
 
+val publishVersion: String = rootProject.ext["versionNoHash"] as String
+
 mavenPublishing {
     publishToMavenCentral(true)
     signAllPublications()
 
-    coordinates("net.flectone", "packetevents-${project.name}", "2.13.0")
+    coordinates("net.flectone", "packeteventsmodern-${project.name}", publishVersion)
 
     pom {
         name.set("${rootProject.name}-${project.name}")
