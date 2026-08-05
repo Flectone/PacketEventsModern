@@ -31,4 +31,5 @@ dependencies {
         exclude("com.fasterxml.jackson.module", "jackson-module-kotlin")
     }
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.19.2")
+    implementation("com.vanniktech:gradle-maven-publish-plugin:0.36.0")
 }

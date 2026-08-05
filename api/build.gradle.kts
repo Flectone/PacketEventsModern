@@ -16,10 +16,6 @@ repositories {
     maven("https://repo.papermc.io/repository/maven-public/")
 }
 
-java {
-    withJavadocJar()
-}
-
 dependencies {
     compileOnlyApi(libs.bundles.adventure)
     compileOnlyApi(libs.bundles.adventure.serializers)
@@ -73,17 +69,6 @@ tasks {
         setDependsOn(dependsOn.filterNot { it == "shadowNoAdventure" })
     }
 
-    javadoc {
-        val options = options as StandardJavadocDocletOptions
-        options.use(true)
-        options.tags("versions:A:Minecraft Versions:")
-        mustRunAfter(generateVersionsFile)
-    }
-
-    sourcesJar {
-        mustRunAfter(generateVersionsFile)
-    }
-
     withType<JavaCompile> {
         dependsOn(generateVersionsFile)
     }
@@ -110,14 +95,6 @@ tasks {
             path.startsWith("net/kyori") && !path.startsWith("net/kyori/adventure/text/serializer") && !path.startsWith(
                 "net/kyori/option"
             )
-        }
-    }
-}
-
-publishing {
-    publications {
-        named<MavenPublication>("shadow") {
-            artifact(tasks["javadocJar"])
         }
     }
 }

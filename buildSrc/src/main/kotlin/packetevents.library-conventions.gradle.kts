@@ -1,9 +1,13 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.SourcesJar
 import groovy.util.Node
+import kotlin.math.sign
 
 plugins {
     `java-library`
-    `maven-publish`
+    signing
+    id("com.vanniktech.maven.publish")
 }
 
 group = rootProject.group
@@ -22,8 +26,6 @@ dependencies {
 }
 
 java {
-    withSourcesJar()
-    withJavadocJar()
     disableAutoTargetJvm()
 }
 
@@ -41,16 +43,6 @@ tasks {
         options.release = 8
     }
 
-    javadoc {
-        title = "packetevents-${project.name} v${rootProject.version}"
-        options.encoding = Charsets.UTF_8.name()
-        options.overview = rootProject.file("buildSrc/src/main/resources/javadoc-overview.html").toString()
-        setDestinationDir(file("${project.layout.buildDirectory.asFile.get()}/docs/javadoc"))
-        options {
-            (this as CoreJavadocOptions).addBooleanOption("Xdoclint:none", true)
-        }
-    }
-
     processResources {
         inputs.property("version", project.version)
         filesMatching(listOf("plugin.yml", "bungee.yml", "velocity-plugin.json", "fabric.mod.json", "META-INF/neoforge.mods.toml")) {
@@ -62,12 +54,6 @@ tasks {
         if (isShadow) {
             archiveClassifier = "default"
         } else {
-            destinationDirectory = rootProject.layout.buildDirectory.dir("libs")
-        }
-    }
-
-    sequenceOf("sourcesJar", "javadocJar").forEach {
-        named<Jar>(it) {
             destinationDirectory = rootProject.layout.buildDirectory.dir("libs")
         }
     }
@@ -95,101 +81,49 @@ tasks {
         }
     }
 
+    tasks.findByName("javadoc")?.enabled = false
+    tasks.findByName("javadocJar")?.enabled = false
+
     defaultTasks("build")
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("shadow") {
-            groupId = project.group as String
-            artifactId = "packetevents-" + project.name
-            version = rootProject.ext["versionNoHash"] as String
+mavenPublishing {
+    publishToMavenCentral(true)
+    signAllPublications()
 
-            if (isShadow) {
-                artifact(project.tasks.withType<ShadowJar>().getByName("shadowJar").archiveFile)
+    coordinates("net.flectone", "packetevents-${project.name}", "2.13.0")
 
-                val allDependencies = project.provider {
-                    project.configurations.getByName("shadow").allDependencies
-                        .filter { it is ProjectDependency || it !is FileCollectionDependency }
-                }
+    pom {
+        name.set("${rootProject.name}-${project.name}")
+        description.set(rootProject.description.toString())
+        url.set("https://github.com/retrooper/packetevents")
 
-                pom {
-                    withXml {
-                        val (libraryDeps, projectDeps) = allDependencies.get().partition { it !is ProjectDependency }
-                        val dependenciesNode =
-                            asNode().get("dependencies") as? Node ?: asNode().appendNode("dependencies")
-
-                        libraryDeps.forEach {
-                            val dependencyNode = dependenciesNode.appendNode("dependency")
-                            dependencyNode.appendNode("groupId", it.group)
-                            dependencyNode.appendNode("artifactId", it.name)
-                            dependencyNode.appendNode("version", it.version)
-                            dependencyNode.appendNode("scope", "compile")
-                        }
-
-                        // project dependencies are other packetevents subprojects
-                        // which this subproject depends on, so it's fine to assume some stuff here
-                        projectDeps.forEach {
-                            val dependencyNode = dependenciesNode.appendNode("dependency")
-                            dependencyNode.appendNode("groupId", it.group)
-                            dependencyNode.appendNode("artifactId", "packetevents-" + it.name)
-                            dependencyNode.appendNode("version", rootProject.ext["versionNoHash"])
-                            dependencyNode.appendNode("scope", "compile")
-                        }
-                    }
-                }
-
-                artifact(tasks["sourcesJar"])
-            } else {
-                from(components["java"])
-            }
-
-            pom {
-                name = "${rootProject.name}-${project.name}"
-                description = rootProject.description
-                url = "https://github.com/retrooper/packetevents"
-
-                licenses {
-                    license {
-                        name = "GPL-3.0"
-                        url = "https://www.gnu.org/licenses/gpl-3.0.html"
-                    }
-                }
-
-                developers {
-                    developer {
-                        id = "retrooper"
-                        name = "Retrooper"
-                        email = "retrooperdev@gmail.com"
-                    }
-                }
-
-                scm {
-                    connection = "scm:git:https://github.com/retrooper/packetevents.git"
-                    developerConnection = "scm:git:https://github.com/retrooper/packetevents.git"
-                    url = "https://github.com/retrooper/packetevents/tree/2.0"
-                }
+        licenses {
+            license {
+                name.set("GPL-3.0")
+                url.set("https://www.gnu.org/licenses/gpl-3.0.html")
             }
         }
-    }
 
-    repositories {
-        maven {
-            val snapshotUrl = "https://repo.codemc.io/repository/maven-snapshots/"
-            val releaseUrl = "https://repo.codemc.io/repository/maven-releases/"
-
-            // Check which URL should be used
-            url = uri(if ((version as String).endsWith("SNAPSHOT")) snapshotUrl else releaseUrl)
-
-            val mavenUsername = System.getenv("retrooper_username") ?: return@maven
-            val mavenPassword = System.getenv("retrooper_password") ?: return@maven
-
-            credentials {
-                username = mavenUsername
-                password = mavenPassword
+        developers {
+            developer {
+                id.set("retrooper")
+                name.set("Retrooper")
+                email.set("retrooperdev@gmail.com")
             }
         }
+
+        scm {
+            connection.set("scm:git:https://github.com/retrooper/packetevents.git")
+            developerConnection.set("scm:git:https://github.com/retrooper/packetevents.git")
+            url.set("https://github.com/retrooper/packetevents/tree/2.0")
+        }
     }
+}
+
+afterEvaluate {
+    tasks.findByName("javadoc")?.enabled = false
+    tasks.findByName("javadocJar")?.enabled = false
 }
 
 // So that SNAPSHOT is always the latest SNAPSHOT

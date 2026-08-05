@@ -38,7 +38,6 @@ configure<ModPublishExtension> {
         if (!hasProperty("publishing.skip_files")) {
             // setup files for this platform
             file = tasks.named<ShadowJar>("shadowJar").flatMap { it.archiveFile }
-            additionalFiles.from(tasks.named<Jar>("sourcesJar").flatMap { it.archiveFile })
         }
 
         val platform = property("publishing.platform").toString()
@@ -72,6 +71,5 @@ if (hasProperty("publishing.platform")
 ) {
     tasks.withType<PublishModTask> {
         dependsOn(tasks.named<ShadowJar>("shadowJar"))
-        dependsOn(tasks.named<Jar>("sourcesJar"))
     }
 }
