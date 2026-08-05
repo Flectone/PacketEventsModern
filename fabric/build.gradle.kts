@@ -16,9 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import me.modmuss50.mpp.ModPublishExtension
-import net.fabricmc.loom.task.prod.ServerProductionRunTask
-
 plugins {
     packetevents.`library-conventions`
     packetevents.`publish-conventions`
@@ -42,24 +39,7 @@ dependencies {
     minecraft(libs.fabric.minecraft.official)
 }
 
-configure<ModPublishExtension> {
-    file = tasks.named<Jar>("jar").flatMap { it.archiveFile }
-}
-
 tasks {
-    register<ServerProductionRunTask>("prodServer") {
-        // always run this task if asked to
-        outputs.upToDateWhen { false }
-
-        minecraftVersion = "26.2-rc-2"
-        loaderVersion = libs.versions.fabric.loader
-        runDir = project.layout.projectDirectory.dir("run").dir(minecraftVersion.get())
-
-        javaLauncher = project.javaToolchains.launcherFor {
-            languageVersion = JavaLanguageVersion.of(25)
-        }
-    }
-
     named<Jar>("jar") {
         destinationDirectory = rootProject.layout.buildDirectory.dir("libs")
     }
