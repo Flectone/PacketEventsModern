@@ -83,10 +83,28 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
 
     steps:
       - uses: actions/checkout@v6
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: artifacts
+
+      - name: Upload artifacts to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/api-build/*.jar
+            artifacts/spigot-build/*.jar
+            artifacts/netty-common-build/*.jar
+            artifacts/bungeecord-build/*.jar
+            artifacts/velocity-build/*.jar
+            artifacts/fabric-build/*.jar
+            artifacts/sponge-build/*.jar
+            artifacts/neoforge-build/*.jar
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
