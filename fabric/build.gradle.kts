@@ -38,7 +38,6 @@ dependencies {
     // dummy dependency
     minecraft(libs.fabric.minecraft.official)
 }
-
 tasks {
     named<Jar>("jar") {
         destinationDirectory = rootProject.layout.buildDirectory.dir("libs")
