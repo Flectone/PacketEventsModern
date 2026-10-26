@@ -37,8 +37,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import static com.github.retrooper.packetevents.util.adventure.AdventureIndexUtil.indexValueOrThrow;
-
 @NullMarked
 public final class EnchantmentDefinition {
 
@@ -92,11 +90,11 @@ public final class EnchantmentDefinition {
             slots = new ArrayList<>(slotsTagList.size());
             for (NBT tag : slotsTagList.getTags()) {
                 String slotGroupId = ((NBTString) tag).getValue();
-                slots.add(indexValueOrThrow(EquipmentSlotGroup.ID_INDEX, slotGroupId));
+                slots.add(EquipmentSlotGroup.ID_INDEX.valueOrThrow(slotGroupId));
             }
         } else {
             String slotGroupId = ((NBTString) slotsTag).getValue();
-            EquipmentSlotGroup slotGroup = indexValueOrThrow(EquipmentSlotGroup.ID_INDEX, slotGroupId);
+            EquipmentSlotGroup slotGroup = EquipmentSlotGroup.ID_INDEX.valueOrThrow(slotGroupId);
             slots = Collections.singletonList(slotGroup);
         }
 

@@ -16,8 +16,6 @@ import org.jspecify.annotations.NullMarked;
 import java.util.Locale;
 import java.util.Map;
 
-import static com.github.retrooper.packetevents.util.adventure.AdventureIndexUtil.indexValueOrThrow;
-
 @NullMarked
 public final class BlockStateCodec {
 
@@ -86,7 +84,7 @@ public final class BlockStateCodec {
     private static void decodeProperties(WrappedBlockState state, NBTCompound tag) {
         boolean modified = false;
         for (Map.Entry<String, NBT> entry : tag.getTags().entrySet()) {
-            StateValue stateValue = indexValueOrThrow(StateValue.NAME_INDEX, entry.getKey());
+            StateValue stateValue = StateValue.NAME_INDEX.valueOrThrow(entry.getKey());
             if (!state.hasProperty(stateValue)) {
                 continue; // ignore property not applicable to this block
             }

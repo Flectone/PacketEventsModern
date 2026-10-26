@@ -20,7 +20,6 @@ package com.github.retrooper.packetevents.protocol.dialog;
 
 import com.github.retrooper.packetevents.protocol.nbt.NBT;
 import com.github.retrooper.packetevents.protocol.nbt.NBTString;
-import com.github.retrooper.packetevents.util.adventure.AdventureIndexUtil;
 import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 import net.kyori.adventure.util.Index;
 import org.jspecify.annotations.NullMarked;
@@ -44,7 +43,7 @@ public enum DialogAction {
     }
 
     public static DialogAction decode(NBT nbt, PacketWrapper<?> wrapper) {
-        return AdventureIndexUtil.indexValueOrThrow(NAME_INDEX, ((NBTString) nbt).getValue());
+        return NAME_INDEX.valueOrThrow(((NBTString) nbt).getValue());
     }
 
     public static NBT encode(PacketWrapper<?> wrapper, DialogAction action) {

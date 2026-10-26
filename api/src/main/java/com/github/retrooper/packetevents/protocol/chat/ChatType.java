@@ -37,8 +37,6 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 
-import static com.github.retrooper.packetevents.util.adventure.AdventureIndexUtil.indexValueOrThrow;
-
 @NullMarked
 public interface ChatType extends MappedEntity, CopyableEntity<ChatType>, DeepComparableEntity {
 
@@ -87,8 +85,7 @@ public interface ChatType extends MappedEntity, CopyableEntity<ChatType>, DeepCo
             }
             if (narrationTag != null) {
                 // the priority is the ONLY value which isn't nullable!
-                narrationPriority = indexValueOrThrow(NarrationPriority.ID_INDEX,
-                        narrationTag.getStringTagValueOrThrow("priority"));
+                narrationPriority = NarrationPriority.ID_INDEX.valueOrThrow(narrationTag.getStringTagValueOrThrow("priority"));
                 narrationTag = narrationTag.getCompoundTagOrNull("description");
             }
         } else {

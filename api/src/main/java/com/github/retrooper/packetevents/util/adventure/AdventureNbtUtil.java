@@ -45,20 +45,8 @@ public final class AdventureNbtUtil {
 
     private static final byte END_TAG_ID = 0;
 
-    private static final TagStringIO TAG_STRING_IO;
+    private static final TagStringIO TAG_STRING_IO = TagStringIO.tagStringIO();
 
-    static {
-        TagStringIO tagStringIo;
-        try {
-            tagStringIo = TagStringIO.tagStringIO();
-        } catch (Throwable ignored) {
-            // pre adventure v4.22.0
-            tagStringIo = TagStringIO.get();
-        }
-        TAG_STRING_IO = tagStringIo;
-    }
-
-    // BinaryTagType is an interface since adventure v5, we need to access everything via Reflection to support both v4 and v5
     private static final Method TAG_TYPE_GET_ID = Reflection.getMethodExact(BinaryTagType.class, "id", byte.class);
     private static final Method TAG_TYPE_READ = Reflection.getMethodExact(BinaryTagType.class, "read", BinaryTag.class, DataInput.class);
     private static final Method TAG_TYPE_WRITE = Reflection.getMethodExact(BinaryTagType.class, "write", void.class, BinaryTag.class, DataOutput.class);
@@ -80,13 +68,8 @@ public final class AdventureNbtUtil {
         // there is no way to get all registered types...
         List<BinaryTagType<? extends BinaryTag>> types;
         try {
-            // adventure v4
-            Field typesField = Reflection.getField(BinaryTagType.class, "TYPES");
-            if (typesField == null) {
-                // adventure v5
-                Class<?> binaryTagTypeImpl = Class.forName("net.kyori.adventure.nbt.BinaryTagTypeImpl");
-                typesField = Reflection.getField(binaryTagTypeImpl, "TYPES");
-            }
+            Class<?> binaryTagTypeImpl = Class.forName("net.kyori.adventure.nbt.BinaryTagTypeImpl");
+            Field typesField = Reflection.getField(binaryTagTypeImpl, "TYPES");
             types = (List<BinaryTagType<? extends BinaryTag>>) typesField.get(null);
         } catch (ReflectiveOperationException exception) {
             throw new RuntimeException("Error while accessing registered binary tag types", exception);

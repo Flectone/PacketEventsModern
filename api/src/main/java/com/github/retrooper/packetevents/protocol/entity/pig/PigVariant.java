@@ -31,7 +31,6 @@ import com.github.retrooper.packetevents.protocol.util.NbtCodecException;
 import com.github.retrooper.packetevents.protocol.util.NbtCodecs;
 import com.github.retrooper.packetevents.protocol.util.NbtMapCodec;
 import com.github.retrooper.packetevents.resources.ResourceLocation;
-import com.github.retrooper.packetevents.util.adventure.AdventureIndexUtil;
 import com.github.retrooper.packetevents.util.mappings.TypesBuilderData;
 import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 import net.kyori.adventure.util.Index;
@@ -106,7 +105,7 @@ public interface PigVariant extends MappedEntity, CopyableEntity<PigVariant>, De
         }
 
         public static ModelType getByName(String name) {
-            return AdventureIndexUtil.indexValueOrThrow(NAME_INDEX, name);
+            return NAME_INDEX.valueOrThrow(name);
         }
 
         public String getName() {

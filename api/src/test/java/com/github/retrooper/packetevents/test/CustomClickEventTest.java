@@ -26,7 +26,6 @@ import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
-import net.kyori.adventure.text.serializer.gson.BackwardCompatUtil;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -37,12 +36,6 @@ public class CustomClickEventTest extends BaseDummyAPITest {
     @Test
     @DisplayName("Test custom click event payload preservation during serialization")
     public void testCustomClickEventPayloadSerialization() {
-        // Only test if Adventure 4.22.0 is available
-        if (!BackwardCompatUtil.IS_4_22_0_OR_NEWER) {
-            LOGGER.info("Skipping custom click event test - Adventure 4.22.0 required");
-            return;
-        }
-
         // Create a component with custom click event with payload
         NBTCompound payloadData = new NBTCompound();
         payloadData.setTag("test_key", new NBTString("test_value"));
@@ -125,12 +118,6 @@ public class CustomClickEventTest extends BaseDummyAPITest {
     @Test
     @DisplayName("Test custom click event without payload")
     public void testCustomClickEventWithoutPayload() {
-        // Only test if Adventure 4.22.0 is available
-        if (!BackwardCompatUtil.IS_4_22_0_OR_NEWER) {
-            LOGGER.info("Skipping custom click event test - Adventure 4.22.0 required");
-            return;
-        }
-
         // Create a component with custom click event without payload (empty NBT)
         Component originalComponent = Component.text("Click me")
                 .clickEvent(ClickEvent.custom(

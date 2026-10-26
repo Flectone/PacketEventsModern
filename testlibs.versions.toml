@@ -1,5 +1,5 @@
 [versions]
-adventure = "5.0.1"
+adventure = "5.2.0"
 mockbukkit = "4.98.0"
 paper = "1.21.10-R0.1-SNAPSHOT"
 slf4j = "2.0.16"

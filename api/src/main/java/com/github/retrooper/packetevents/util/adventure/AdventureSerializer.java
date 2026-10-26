@@ -21,7 +21,6 @@ package com.github.retrooper.packetevents.util.adventure;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.protocol.nbt.NBT;
 import com.github.retrooper.packetevents.protocol.player.ClientVersion;
-import com.github.retrooper.packetevents.protocol.stats.Statistics;
 import com.github.retrooper.packetevents.protocol.util.NbtDecoder;
 import com.github.retrooper.packetevents.protocol.util.NbtEncoder;
 import com.github.retrooper.packetevents.wrapper.PacketWrapper;
@@ -264,7 +263,6 @@ public final class AdventureSerializer implements NbtEncoder<Component>, NbtDeco
                         }
                     })
                     .legacyHoverEventSerializer(NBTLegacyHoverEventSerializer.get())
-                    .showAchievementToComponent(input -> Statistics.getById(input).display())
                     .build();
         }
         return this.gson;

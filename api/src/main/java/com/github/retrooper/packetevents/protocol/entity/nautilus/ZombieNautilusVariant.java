@@ -26,7 +26,6 @@ import com.github.retrooper.packetevents.protocol.nbt.NBTCompound;
 import com.github.retrooper.packetevents.protocol.nbt.NBTString;
 import com.github.retrooper.packetevents.protocol.player.ClientVersion;
 import com.github.retrooper.packetevents.resources.ResourceLocation;
-import com.github.retrooper.packetevents.util.adventure.AdventureIndexUtil;
 import com.github.retrooper.packetevents.util.mappings.TypesBuilderData;
 import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 import net.kyori.adventure.util.Index;
@@ -82,7 +81,7 @@ public interface ZombieNautilusVariant extends MappedEntity, CopyableEntity<Zomb
         }
 
         public static ModelType getByName(String name) {
-            return AdventureIndexUtil.indexValueOrThrow(NAME_INDEX, name);
+            return NAME_INDEX.valueOrThrow(name);
         }
 
         public String getName() {

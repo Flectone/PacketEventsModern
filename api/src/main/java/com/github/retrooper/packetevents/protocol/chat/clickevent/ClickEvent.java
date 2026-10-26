@@ -22,13 +22,10 @@ import com.github.retrooper.packetevents.protocol.dialog.Dialog;
 import com.github.retrooper.packetevents.protocol.nbt.NBTCompound;
 import com.github.retrooper.packetevents.protocol.nbt.NBTEnd;
 import com.github.retrooper.packetevents.resources.ResourceLocation;
-import com.github.retrooper.packetevents.util.adventure.AdventureSupportUtil;
 import com.github.retrooper.packetevents.util.adventure.NbtTagHolder;
 import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 import net.kyori.adventure.text.event.ClickEvent.Payload;
 import org.jspecify.annotations.NullMarked;
-
-import java.util.Locale;
 
 @NullMarked
 public interface ClickEvent {
@@ -48,19 +45,19 @@ public interface ClickEvent {
     ClickEventAction<?> getAction();
 
     static ClickEvent fromAdventure(net.kyori.adventure.text.event.ClickEvent clickEvent) {
-        switch (clickEvent.action().name().toLowerCase(Locale.ROOT)) {
+        switch (clickEvent.action().name()) {
             case "open_url":
-                return new OpenUrlClickEvent(AdventureSupportUtil.getStringValue(clickEvent));
+                return new OpenUrlClickEvent(((Payload.Text) clickEvent.payload()).value());
             case "open_file":
-                return new OpenFileClickEvent(AdventureSupportUtil.getStringValue(clickEvent));
+                return new OpenFileClickEvent(((Payload.Text) clickEvent.payload()).value());
             case "run_command":
-                return new RunCommandClickEvent(AdventureSupportUtil.getStringValue(clickEvent));
+                return new RunCommandClickEvent(((Payload.Text) clickEvent.payload()).value());
             case "suggest_command":
-                return new SuggestCommandClickEvent(AdventureSupportUtil.getStringValue(clickEvent));
+                return new SuggestCommandClickEvent(((Payload.Text) clickEvent.payload()).value());
             case "change_page":
-                return new ChangePageClickEvent(AdventureSupportUtil.getStringValue(clickEvent));
+                return new ChangePageClickEvent(((Payload.Int) clickEvent.payload()).integer());
             case "copy_to_clipboard":
-                return new CopyToClipboardClickEvent(AdventureSupportUtil.getStringValue(clickEvent));
+                return new CopyToClipboardClickEvent(((Payload.Text) clickEvent.payload()).value());
             case "show_dialog":
                 return new ShowDialogClickEvent((Dialog) ((Payload.Dialog) clickEvent.payload()).dialog());
             case "custom":
