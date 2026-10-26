@@ -44,32 +44,26 @@ public interface ClickEvent {
 
     ClickEventAction<?> getAction();
 
-    static ClickEvent fromAdventure(net.kyori.adventure.text.event.ClickEvent clickEvent) {
-        switch (clickEvent.action().name()) {
-            case "open_url":
-                return new OpenUrlClickEvent(((Payload.Text) clickEvent.payload()).value());
-            case "open_file":
-                return new OpenFileClickEvent(((Payload.Text) clickEvent.payload()).value());
-            case "run_command":
-                return new RunCommandClickEvent(((Payload.Text) clickEvent.payload()).value());
-            case "suggest_command":
-                return new SuggestCommandClickEvent(((Payload.Text) clickEvent.payload()).value());
-            case "change_page":
-                return new ChangePageClickEvent(((Payload.Int) clickEvent.payload()).integer());
-            case "copy_to_clipboard":
-                return new CopyToClipboardClickEvent(((Payload.Text) clickEvent.payload()).value());
-            case "show_dialog":
-                return new ShowDialogClickEvent((Dialog) ((Payload.Dialog) clickEvent.payload()).dialog());
-            case "custom":
-                Payload.Custom payload = (Payload.Custom) clickEvent.payload();
+    static ClickEvent fromAdventure(net.kyori.adventure.text.event.ClickEvent<?> clickEvent) {
+        return switch (clickEvent.payload()) {
+            case Payload.Text text -> switch (clickEvent.action().name()) {
+                case "open_url" -> new OpenUrlClickEvent(text.value());
+                case "open_file" -> new OpenFileClickEvent(text.value());
+                case "run_command" -> new RunCommandClickEvent(text.value());
+                case "suggest_command" -> new SuggestCommandClickEvent(text.value());
+                case "copy_to_clipboard" -> new CopyToClipboardClickEvent(text.value());
+                default -> throw new UnsupportedOperationException("Unsupported clickevent: " + clickEvent);
+            };
+            case Payload.Int page -> new ChangePageClickEvent(page.integer());
+            case Payload.Dialog dialog -> new ShowDialogClickEvent((Dialog) dialog.dialog());
+            case Payload.Custom payload -> {
                 NbtTagHolder nbtTag = (NbtTagHolder) payload.nbt();
-                return new CustomClickEvent(
+                yield new CustomClickEvent(
                         new ResourceLocation(payload.key()),
                         nbtTag == null || nbtTag.getTag() instanceof NBTEnd ? null : nbtTag.getTag()
                 );
-            default:
-                throw new UnsupportedOperationException("Unsupported clickevent: " + clickEvent);
-        }
+            }
+        };
     }
 
     net.kyori.adventure.text.event.ClickEvent asAdventure();

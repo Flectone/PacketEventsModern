@@ -77,7 +77,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -159,32 +159,27 @@ public class AdventureNBTSerializer implements ComponentSerializer<Component, Co
     }
 
     public @NotNull Component deserialize(@NotNull NBT input, PacketWrapper<?> wrapper) {
-        if (input.getType() == NBTType.STRING) { // Serialized as string
-            return Component.text(((NBTString) input).getValue());
+        if (input instanceof NBTString string) { // Serialized as string
+            return Component.text(string.getValue());
         }
 
-        if (input.getType() == NBTType.BYTE && ((NBTByte) input).getAsByte() < 2) { // Serialized as boolean
-            return Component.text(((NBTByte) input).getAsByte() == 1);
+        if (input instanceof NBTByte bool && bool.getAsByte() < 2) { // Serialized as boolean
+            return Component.text(bool.getAsByte() == 1);
         }
 
-        if (input instanceof NBTNumber) { // Serialized as number
-            return Component.text(((NBTNumber) input).getAsNumber().toString());
+        if (input instanceof NBTNumber number) { // Serialized as number
+            return Component.text(number.getAsNumber().toString());
         }
 
         // Serialized as tree
         NBTCompound compound = requireType(input, NBTType.COMPOUND);
         NBTReader reader = new NBTReader(wrapper, compound);
 
-        Function<NBT, String> textFunction = nbt -> {
-            if (nbt.getType() == NBTType.STRING) {
-                return ((NBTString) nbt).getValue();
-            } else if (nbt.getType() == NBTType.BYTE && ((NBTByte) nbt).getAsByte() < 2) {
-                return String.valueOf(((NBTByte) nbt).getAsByte() == 1);
-            } else if (nbt instanceof NBTNumber) {
-                return ((NBTNumber) nbt).getAsNumber().toString();
-            } else {
-                throw new IllegalStateException("Don't know how to deserialize " + nbt.getType() + " to text");
-            }
+        Function<NBT, String> textFunction = nbt -> switch (nbt) {
+            case NBTString string -> string.getValue();
+            case NBTByte bool when bool.getAsByte() < 2 -> String.valueOf(bool.getAsByte() == 1);
+            case NBTNumber number -> number.getAsNumber().toString();
+            default -> throw new IllegalStateException("Don't know how to deserialize " + nbt.getType() + " to text");
         };
 
         String text = reader.read("text", textFunction);
@@ -192,35 +187,25 @@ public class AdventureNBTSerializer implements ComponentSerializer<Component, Co
 
         String translate = reader.readUTF("translate", Function.identity());
         String translateFallback = reader.readUTF("fallback", Function.identity());
-        List<TranslationArgument> translateWith;
-        NBTType<?> type = reader.type("with");
-        if (type == NBTType.INT_ARRAY) {
-            translateWith = reader.readIntArray("with", params -> {
-                List<TranslationArgument> args = new ArrayList<>(params.length);
-                for (int param : params) {
-                    args.add(TranslationArgument.numeric(param));
-                }
-                return args;
-            });
-        } else if (type == NBTType.BYTE_ARRAY) {
-            translateWith = reader.readByteArray("with", params -> {
+        NBT with = reader.read("with", Function.identity());
+        List<TranslationArgument> translateWith = switch (with) {
+            case null -> null;
+            case NBTIntArray array -> Arrays.stream(array.getValue())
+                    .mapToObj(TranslationArgument::numeric)
+                    .toList();
+            case NBTLongArray array -> Arrays.stream(array.getValue())
+                    .mapToObj(TranslationArgument::numeric)
+                    .toList();
+            case NBTByteArray array -> {
+                byte[] params = array.getValue();
                 List<TranslationArgument> args = new ArrayList<>(params.length);
                 for (byte param : params) {
                     args.add(TranslationArgument.bool(param != (byte) 0));
                 }
-                return args;
-            });
-        } else if (type == NBTType.LONG_ARRAY) {
-            translateWith = reader.readLongArray("with", params -> {
-                List<TranslationArgument> args = new ArrayList<>(params.length);
-                for (long param : params) {
-                    args.add(TranslationArgument.numeric(param));
-                }
-                return args;
-            });
-        } else {
-            translateWith = reader.readList("with", tag -> this.deserializeTranslationArgumentList(tag, wrapper));
-        }
+                yield args;
+            }
+            default -> this.deserializeTranslationArgumentList(requireType(with, NBTType.LIST).getTags(), wrapper);
+        };
         NBTReader score = reader.child("score");
         String selector = reader.readUTF("selector", Function.identity());
         String keybind = reader.readUTF("keybind", Function.identity());
@@ -304,8 +289,8 @@ public class AdventureNBTSerializer implements ComponentSerializer<Component, Co
     }
 
     public @NotNull NBT serialize(@NotNull Component component, PacketWrapper<?> wrapper) {
-        if (component instanceof TextComponent && !component.hasStyling() && component.children().isEmpty()) {
-            return new NBTString(((TextComponent) component).content());
+        if (component instanceof TextComponent text && !component.hasStyling() && component.children().isEmpty()) {
+            return new NBTString(text.content());
         }
 
         return this.serializeComponent(component, wrapper);
@@ -315,104 +300,111 @@ public class AdventureNBTSerializer implements ComponentSerializer<Component, Co
         NBTWriter writer = new NBTWriter(new NBTCompound());
 
         // component parts
-        if (component instanceof TextComponent) {
-            // text content
-            writer.writeUTF("text", ((TextComponent) component).content());
-        } else if (component instanceof TranslatableComponent) {
-            // translation key
-            writer.writeUTF("translate", ((TranslatableComponent) component).key());
-
-            // translation fallback
-            String fallback = ((TranslatableComponent) component).fallback();
-            if (fallback != null) {
-                writer.writeUTF("fallback", fallback);
+        switch (component) {
+            case TextComponent text -> {
+                // text content
+                writer.writeUTF("text", text.content());
             }
+            case TranslatableComponent translatable -> {
+                // translation key
+                writer.writeUTF("translate", translatable.key());
 
-            // translation arguments
-            List<TranslationArgument> args = ((TranslatableComponent) component).arguments();
-            if (!args.isEmpty()) {
-                writer.writeList("with", NBTType.COMPOUND, this.serializeTranslationArgumentList(args, wrapper));
-            }
-        } else if (component instanceof ScoreComponent) {
-            // nested compound
-            NBTWriter score = writer.child("score");
-
-            // score name
-            String scoreName = ((ScoreComponent) component).name();
-            score.writeUTF("name", scoreName);
-
-            // score objective
-            String scoreObjective = ((ScoreComponent) component).objective();
-            score.writeUTF("objective", scoreObjective);
-        } else if (component instanceof SelectorComponent) {
-            // selector
-            writer.writeUTF("selector", ((SelectorComponent) component).pattern());
-
-            // separator
-            Component separator = ((SelectorComponent) component).separator();
-            if (separator != null) writer.write("separator", this.serialize(separator, wrapper));
-        } else if (component instanceof KeybindComponent) {
-            // keybind
-            writer.writeUTF("keybind", ((KeybindComponent) component).keybind());
-        } else if (component instanceof NBTComponent<?>) {
-            // nbt path
-            String nbtPath = ((NBTComponent<?>) component).nbtPath();
-            writer.writeUTF("nbt", nbtPath);
-
-            // interpret
-            boolean interpret = ((NBTComponent<?>) component).interpret();
-            if (interpret) {
-                writer.writeBoolean("interpret", true);
-            }
-
-            // separator
-            Component separator = ((NBTComponent<?>) component).separator();
-            if (separator != null) writer.write("separator", this.serialize(separator, wrapper));
-
-            if (component instanceof BlockNBTComponent) {
-                // nbt block
-                BlockNBTComponent.Pos pos = ((BlockNBTComponent) component).pos();
-                writer.writeUTF("block", pos.asString());
-            } else if (component instanceof EntityNBTComponent) {
-                // nbt entity
-                String selector = ((EntityNBTComponent) component).selector();
-                writer.writeUTF("entity", selector);
-            } else if (component instanceof StorageNBTComponent) {
-                // nbt storage key
-                Key storage = ((StorageNBTComponent) component).storage();
-                writer.writeUTF("storage", storage.asString());
-            }
-        } else if (component instanceof ObjectComponent) {
-            if (this.version.isNewerThanOrEquals(ClientVersion.V_1_21_9)) {
-                // object contents
-                ObjectContents objectContents = ((ObjectComponent) component).contents();
-                if (objectContents instanceof PlayerHeadObjectContents) {
-                    // player head object
-                    PlayerHeadObjectContents playerHead = ((PlayerHeadObjectContents) objectContents);
-
-                    // player head profile
-                    ItemProfile profile = ItemProfile.fromAdventure(playerHead);
-                    writer.write("player", ItemProfile.encode(wrapper, profile));
-
-                    // player head hat
-                    if (playerHead.hat() != PlayerHeadObjectContents.DEFAULT_HAT) {
-                        writer.writeBoolean("hat", playerHead.hat());
-                    }
-                } else if (objectContents instanceof SpriteObjectContents) {
-                    // sprite object
-                    SpriteObjectContents spriteObjectContents = ((SpriteObjectContents) objectContents);
-
-                    // atlas
-                    if (!spriteObjectContents.atlas().equals(SpriteObjectContents.DEFAULT_ATLAS)) {
-                        writer.writeUTF("atlas", spriteObjectContents.atlas().toString());
-                    }
-
-                    // sprite
-                    writer.writeUTF("sprite", spriteObjectContents.sprite().toString());
+                // translation fallback
+                String fallback = translatable.fallback();
+                if (fallback != null) {
+                    writer.writeUTF("fallback", fallback);
                 }
-            } else {
-                // skip
-                writer.writeUTF("text", "");
+
+                // translation arguments
+                List<TranslationArgument> args = translatable.arguments();
+                if (!args.isEmpty()) {
+                    writer.writeList("with", NBTType.COMPOUND, this.serializeTranslationArgumentList(args, wrapper));
+                }
+            }
+            case ScoreComponent scoreComponent -> {
+                // nested compound
+                NBTWriter score = writer.child("score");
+
+                // score name
+                score.writeUTF("name", scoreComponent.name());
+
+                // score objective
+                score.writeUTF("objective", scoreComponent.objective());
+            }
+            case SelectorComponent selector -> {
+                // selector
+                writer.writeUTF("selector", selector.pattern());
+
+                // separator
+                Component separator = selector.separator();
+                if (separator != null) writer.write("separator", this.serialize(separator, wrapper));
+            }
+            case KeybindComponent keybind -> {
+                // keybind
+                writer.writeUTF("keybind", keybind.keybind());
+            }
+            case NBTComponent<?> nbtComponent -> {
+                // nbt path
+                writer.writeUTF("nbt", nbtComponent.nbtPath());
+
+                // interpret
+                if (nbtComponent.interpret()) {
+                    writer.writeBoolean("interpret", true);
+                }
+
+                // separator
+                Component separator = nbtComponent.separator();
+                if (separator != null) writer.write("separator", this.serialize(separator, wrapper));
+
+                switch (nbtComponent) {
+                    case BlockNBTComponent block -> {
+                        // nbt block
+                        writer.writeUTF("block", block.pos().asString());
+                    }
+                    case EntityNBTComponent entity -> {
+                        // nbt entity
+                        writer.writeUTF("entity", entity.selector());
+                    }
+                    case StorageNBTComponent storage -> {
+                        // nbt storage key
+                        writer.writeUTF("storage", storage.storage().asString());
+                    }
+                    default -> {
+                    }
+                }
+            }
+            case ObjectComponent object -> {
+                if (this.version.isNewerThanOrEquals(ClientVersion.V_1_21_9)) {
+                    // object contents
+                    switch (object.contents()) {
+                        case PlayerHeadObjectContents playerHead -> {
+                            // player head profile
+                            ItemProfile profile = ItemProfile.fromAdventure(playerHead);
+                            writer.write("player", ItemProfile.encode(wrapper, profile));
+
+                            // player head hat
+                            if (playerHead.hat() != PlayerHeadObjectContents.DEFAULT_HAT) {
+                                writer.writeBoolean("hat", playerHead.hat());
+                            }
+                        }
+                        case SpriteObjectContents sprite -> {
+                            // atlas
+                            if (!sprite.atlas().equals(SpriteObjectContents.DEFAULT_ATLAS)) {
+                                writer.writeUTF("atlas", sprite.atlas().toString());
+                            }
+
+                            // sprite
+                            writer.writeUTF("sprite", sprite.sprite().toString());
+                        }
+                        default -> {
+                        }
+                    }
+                } else {
+                    // skip
+                    writer.writeUTF("text", "");
+                }
+            }
+            default -> {
             }
         }
 
@@ -435,7 +427,7 @@ public class AdventureNBTSerializer implements ComponentSerializer<Component, Co
         return this.deserializeStyle(input, PacketWrapper.createDummyWrapper(this.version));
     }
 
-    @SuppressWarnings({"PatternValidation", "rawtypes"})
+    @SuppressWarnings("PatternValidation")
     public @NotNull Style deserializeStyle(NBTCompound input, PacketWrapper<?> wrapper) {
         if (input.isEmpty()) return Style.empty();
 
@@ -465,86 +457,47 @@ public class AdventureNBTSerializer implements ComponentSerializer<Component, Co
         boolean modernEvents = this.version.isNewerThanOrEquals(ClientVersion.V_1_21_5);
         NBTReader clickEvent = reader.child(modernEvents ? "click_event" : "clickEvent");
         if (clickEvent != null) {
-            ClickEvent.Action action = clickEvent.readUTF("action", ClickEvent.Action.NAMES::value);
-            ClickEvent value;
-            switch (action.toString()) {
-                case "open_url":
-                    value = ClickEvent.openUrl(clickEvent.readUTF(modernEvents ? "url" : "value", Function.identity()));
-                    break;
-                case "open_file":
-                    value = ClickEvent.openFile(clickEvent.readUTF(modernEvents ? "path" : "value", Function.identity()));
-                    break;
-                case "run_command":
-                    value = ClickEvent.runCommand(clickEvent.readUTF(modernEvents ? "command" : "value", Function.identity()));
-                    break;
-                case "suggest_command":
-                    value = ClickEvent.suggestCommand(clickEvent.readUTF(modernEvents ? "command" : "value", Function.identity()));
-                    break;
-                case "change_page":
-                    value = ClickEvent.changePage(modernEvents
-                            ? clickEvent.readNumber("page", Number::intValue)
-                            : clickEvent.readUTF("value", Integer::parseInt));
-                    break;
-                case "copy_to_clipboard":
-                    value = ClickEvent.copyToClipboard(clickEvent.readUTF("value", Function.identity()));
-                    break;
-                case "show_dialog":
+            ClickEvent.Action<?> action = clickEvent.readUTF("action", ClickEvent.Action.NAMES::value);
+            ClickEvent<?> value = switch (action.name()) {
+                case "open_url" -> ClickEvent.openUrl(clickEvent.readUTF(modernEvents ? "url" : "value", Function.identity()));
+                case "open_file" -> ClickEvent.openFile(clickEvent.readUTF(modernEvents ? "path" : "value", Function.identity()));
+                case "run_command" -> ClickEvent.runCommand(clickEvent.readUTF(modernEvents ? "command" : "value", Function.identity()));
+                case "suggest_command" -> ClickEvent.suggestCommand(clickEvent.readUTF(modernEvents ? "command" : "value", Function.identity()));
+                case "change_page" -> ClickEvent.changePage(modernEvents
+                        ? clickEvent.readNumber("page", Number::intValue)
+                        : clickEvent.readUTF("value", Integer::parseInt));
+                case "copy_to_clipboard" -> ClickEvent.copyToClipboard(clickEvent.readUTF("value", Function.identity()));
+                case "show_dialog" -> {
                     NBT dialogTag = clickEvent.read("dialog", Function.identity());
-                    value = ClickEvent.showDialog(Dialog.decode(dialogTag, wrapper));
-                    break;
-                case "custom":
+                    yield ClickEvent.showDialog(Dialog.decode(dialogTag, wrapper));
+                }
+                case "custom" -> {
                     Key key = clickEvent.readUTF("id", Key::key);
                     NBT payload = clickEvent.read("payload", Function.identity());
-                    value = ClickEvent.custom(key, new NbtTagHolder(payload != null ? payload : NBTEnd.INSTANCE));
-                    break;
-                default:
-                    throw new UnsupportedOperationException("Unsupported clickevent: " + action);
-            }
+                    yield ClickEvent.custom(key, new NbtTagHolder(payload != null ? payload : NBTEnd.INSTANCE));
+                }
+                default -> throw new UnsupportedOperationException("Unsupported clickevent: " + action);
+            };
             style.clickEvent(value);
         }
 
         NBTReader hoverEvent = reader.child(modernEvents ? "hover_event" : "hoverEvent");
         if (hoverEvent != null) {
-            HoverEvent.Action action = hoverEvent.readUTF("action", HoverEvent.Action.NAMES::value);
+            HoverEvent.Action<?> action = hoverEvent.readUTF("action", HoverEvent.Action.NAMES::value);
             switch (action.toString()) {
-                case "show_text":
-                    style.hoverEvent(HoverEvent.showText(hoverEvent.read(modernEvents ? "value" : "contents",
-                            tag -> this.deserialize(tag, wrapper))));
-                    break;
-                case "show_item":
+                case "show_text" -> style.hoverEvent(HoverEvent.showText(hoverEvent.read(modernEvents ? "value" : "contents",
+                        tag -> this.deserialize(tag, wrapper))));
+                case "show_item" -> {
                     if (!modernEvents && hoverEvent.type("contents") == NBTType.STRING) {
                         style.hoverEvent(HoverEvent.showItem(hoverEvent.readUTF("contents", Key::key), 1));
-                        break;
-                    }
-
-                    NBTReader item = modernEvents ? hoverEvent : hoverEvent.child("contents");
-                    if (item == null) break;
-                    Key itemId = item.readUTF("id", Key::key);
-                    Integer count = item.readNumber("count", Number::intValue);
-                    int nonNullCount = count == null ? 1 : count;
-
-                    BinaryTagHolder tag = item.readUTF("tag", BinaryTagHolder::binaryTagHolder);
-                    if (tag != null) {
-                        style.hoverEvent(HoverEvent.showItem(itemId, nonNullCount, tag));
                     } else {
-                        Map<Key, DataComponentValue> components = item.readCompound("components", nbt -> {
-                            Map<Key, DataComponentValue> map = new HashMap<>(nbt.size());
-                            for (Map.Entry<String, NBT> entry : nbt.getTags().entrySet()) {
-                                if (entry.getKey().startsWith("!")) { // removed component
-                                    Key key = Key.key(entry.getKey().substring(1));
-                                    map.put(key, DataComponentValue.removed());
-                                    continue;
-                                }
-                                Key key = Key.key(entry.getKey());
-                                map.put(key, new NbtTagHolder(entry.getValue()));
-                            }
-                            return map;
-                        });
-                        style.hoverEvent(HoverEvent.showItem(itemId, nonNullCount,
-                                components == null ? Collections.emptyMap() : components));
+                        NBTReader item = modernEvents ? hoverEvent : hoverEvent.child("contents");
+                        if (item != null) {
+                            style.hoverEvent(this.deserializeShowItem(item));
+                        }
                     }
-                    break;
-                case "show_entity":
+                }
+                case "show_entity" -> {
                     NBTReader entity = modernEvents ? hoverEvent : hoverEvent.child("contents");
                     if (entity != null) {
                         style.hoverEvent(HoverEvent.showEntity(
@@ -552,11 +505,38 @@ public class AdventureNBTSerializer implements ComponentSerializer<Component, Co
                                 entity.read(modernEvents ? "uuid" : "id", NbtCodecs.LENIENT_UUID),
                                 entity.read("name", name -> this.deserialize(name, wrapper))));
                     }
-                    break;
+                }
+                default -> {
+                }
             }
         }
 
         return style.build();
+    }
+
+    @SuppressWarnings("PatternValidation")
+    private HoverEvent<HoverEvent.ShowItem> deserializeShowItem(NBTReader item) {
+        Key itemId = item.readUTF("id", Key::key);
+        Integer count = item.readNumber("count", Number::intValue);
+        int nonNullCount = count == null ? 1 : count;
+
+        BinaryTagHolder tag = item.readUTF("tag", BinaryTagHolder::binaryTagHolder);
+        if (tag != null) {
+            return HoverEvent.showItem(itemId, nonNullCount, tag);
+        }
+
+        Map<Key, DataComponentValue> components = item.readCompound("components", nbt -> {
+            Map<Key, DataComponentValue> map = new HashMap<>(nbt.size());
+            for (Map.Entry<String, NBT> entry : nbt.getTags().entrySet()) {
+                if (entry.getKey().startsWith("!")) { // removed component
+                    map.put(Key.key(entry.getKey().substring(1)), DataComponentValue.removed());
+                } else {
+                    map.put(Key.key(entry.getKey()), new NbtTagHolder(entry.getValue()));
+                }
+            }
+            return map;
+        });
+        return HoverEvent.showItem(itemId, nonNullCount, components == null ? Map.of() : components);
     }
 
     @Deprecated
@@ -588,45 +568,33 @@ public class AdventureNBTSerializer implements ComponentSerializer<Component, Co
         String insertion = style.insertion();
         if (insertion != null) writer.writeUTF("insertion", insertion);
 
-        ClickEvent clickEvent = style.clickEvent();
+        ClickEvent<?> clickEvent = style.clickEvent();
         if (clickEvent != null) {
             boolean modern = this.version.isNewerThanOrEquals(ClientVersion.V_1_21_5);
             NBTWriter child = writer.child(modern ? "click_event" : "clickEvent");
             child.writeUTF("action", clickEvent.action().toString());
             if (!modern) {
-                if (clickEvent.action() != ClickEvent.Action.CHANGE_PAGE) {
-                    child.writeUTF("value", ((ClickEvent.Payload.Text) clickEvent.payload()).value());
-                } else {
-                    child.writeUTF("value", Integer.toString(((ClickEvent.Payload.Int) clickEvent.payload()).integer()));
-                }
+                child.writeUTF("value", switch (clickEvent.payload()) {
+                    case ClickEvent.Payload.Int page -> Integer.toString(page.integer());
+                    case ClickEvent.Payload.Text text -> text.value();
+                    default -> throw new UnsupportedOperationException("Unsupported clickevent: " + clickEvent);
+                });
             } else {
-                switch (clickEvent.action().name()) {
-                    case "open_url":
-                        child.writeUTF("url", ((ClickEvent.Payload.Text) clickEvent.payload()).value());
-                        break;
-                    case "open_file":
-                        child.writeUTF("path", ((ClickEvent.Payload.Text) clickEvent.payload()).value());
-                        break;
-                    case "run_command":
-                    case "suggest_command":
-                        child.writeUTF("command", ((ClickEvent.Payload.Text) clickEvent.payload()).value());
-                        break;
-                    case "change_page":
-                        child.writeInt("page", ((ClickEvent.Payload.Int) clickEvent.payload()).integer());
-                        break;
-                    case "copy_to_clipboard":
-                        child.writeUTF("value", ((ClickEvent.Payload.Text) clickEvent.payload()).value());
-                        break;
-                    case "show_dialog":
-                        Dialog dialog = (Dialog) ((ClickEvent.Payload.Dialog) clickEvent.payload()).dialog();
-                        child.write("dialog", Dialog.encode(wrapper, dialog));
-                        break;
-                    case "custom":
-                        ClickEvent.Payload.Custom customPayload = (ClickEvent.Payload.Custom) clickEvent.payload();
+                switch (clickEvent.payload()) {
+                    case ClickEvent.Payload.Text text -> child.writeUTF(switch (clickEvent.action().name()) {
+                        case "open_url" -> "url";
+                        case "open_file" -> "path";
+                        case "run_command", "suggest_command" -> "command";
+                        case "copy_to_clipboard" -> "value";
+                        default -> throw new UnsupportedOperationException("Unsupported clickevent: " + clickEvent);
+                    }, text.value());
+                    case ClickEvent.Payload.Int page -> child.writeInt("page", page.integer());
+                    case ClickEvent.Payload.Dialog dialog -> child.write("dialog", Dialog.encode(wrapper, (Dialog) dialog.dialog()));
+                    case ClickEvent.Payload.Custom customPayload -> {
                         child.writeUTF("id", customPayload.key().asString());
                         BinaryTagHolder nbtHolder = customPayload.nbt();
-                        if (nbtHolder instanceof NbtTagHolder) {
-                            NBT payloadTag = ((NbtTagHolder) nbtHolder).getTag();
+                        if (nbtHolder instanceof NbtTagHolder holder) {
+                            NBT payloadTag = holder.getTag();
                             // nbt end tag means there is no payload
                             if (!(payloadTag instanceof NBTEnd)) {
                                 child.write("payload", payloadTag);
@@ -639,9 +607,7 @@ public class AdventureNBTSerializer implements ComponentSerializer<Component, Co
                                 child.write("payload", AdventureNbtUtil.fromString(nbtString));
                             }
                         }
-                        break;
-                    default:
-                        throw new UnsupportedOperationException("Unsupported clickevent: " + clickEvent);
+                    }
                 }
             }
         }
@@ -651,71 +617,75 @@ public class AdventureNBTSerializer implements ComponentSerializer<Component, Co
             boolean modern = this.version.isNewerThanOrEquals(ClientVersion.V_1_21_5);
             NBTWriter child = writer.child(modern ? "hover_event" : "hoverEvent");
             child.writeUTF("action", hoverEvent.action().toString());
-            switch (hoverEvent.action().toString()) {
-                case "show_text":
-                    child.write(modern ? "value" : "contents", this.serialize((Component) hoverEvent.value(), wrapper));
-                    break;
-                case "show_item":
-                    HoverEvent.ShowItem item = (HoverEvent.ShowItem) hoverEvent.value();
-                    Key itemId = item.item();
-                    int count = item.count();
-                    BinaryTagHolder nbt = item.nbt();
-                    boolean emptyComps = item.dataComponents().isEmpty();
-
-                    // "modern" item stacks are no longer allowed to be inlined
-                    if (!modern && count == 1 && nbt == null && emptyComps) {
-                        child.writeUTF("contents", itemId.asString());
-                    } else {
-                        NBTWriter itemNBT = modern ? child : child.child("contents");
-                        itemNBT.writeUTF("id", itemId.asString());
-                        if (!modern || count != 1) {
-                            itemNBT.writeInt("count", count);
-                        }
-                        if (nbt != null) {
-                            itemNBT.writeUTF("tag", nbt.string());
-                        }
-                        if (!emptyComps) {
-                            NBTWriter compsNbt = itemNBT.child("components");
-                            for (Map.Entry<Key, DataComponentValue> entry : item.dataComponents().entrySet()) {
-                                if (entry.getValue() == DataComponentValue.removed()) {
-                                    // I don't think value matters here
-                                    compsNbt.writeCompound("!" + entry.getKey(), new NBTCompound());
-                                    continue;
-                                }
-                                if (entry.getValue() instanceof NbtTagHolder) {
-                                    NBT compNbt = ((NbtTagHolder) entry.getValue()).getTag();
-                                    compsNbt.write(entry.getKey().toString(), compNbt);
-                                } else if (entry.getValue() instanceof DataComponentValue.TagSerializable) {
-                                    DataComponentValue.TagSerializable tagSerializable = (DataComponentValue.TagSerializable) entry.getValue();
-                                    NBT tag = AdventureNbtUtil.fromString(tagSerializable.asBinaryTag().string());
-                                    compsNbt.write(entry.getKey().toString(), tag);
-                                } else if (entry.getValue() instanceof GsonDataComponentValue) {
-                                    // there is no way to recover 100% of the actual information
-                                    // without implementing JSON data serialization for every
-                                    // available component
-                                    JsonElement element = ((GsonDataComponentValue) entry.getValue()).element();
-                                    compsNbt.write(entry.getKey().toString(), NBTCodec.jsonToNBT(element));
-                                }
-                                // else: unsupported entry component value, skip
-                            }
-                        }
-                    }
-                    break;
-                case "show_entity":
-                    HoverEvent.ShowEntity showEntity = (HoverEvent.ShowEntity) hoverEvent.value();
+            switch (hoverEvent.value()) {
+                case Component text -> child.write(modern ? "value" : "contents", this.serialize(text, wrapper));
+                case HoverEvent.ShowItem item -> this.serializeShowItem(item, child, modern);
+                case HoverEvent.ShowEntity showEntity -> {
                     NBTWriter entity = modern ? child : child.child("contents");
-                    if (entity != null) {
-                        entity.writeUTF(modern ? "id" : "type", showEntity.type().asString());
-                        entity.writeIntArray(modern ? "uuid" : "id", UniqueIdUtil.toIntArray(showEntity.id()));
-                        if (showEntity.name() != null) {
-                            entity.write("name", this.serialize(showEntity.name(), wrapper));
-                        }
+                    entity.writeUTF(modern ? "id" : "type", showEntity.type().asString());
+                    entity.writeIntArray(modern ? "uuid" : "id", UniqueIdUtil.toIntArray(showEntity.id()));
+                    Component name = showEntity.name();
+                    if (name != null) {
+                        entity.write("name", this.serialize(name, wrapper));
                     }
-                    break;
+                }
+                default -> {
+                }
             }
         }
 
         return writer.compound;
+    }
+
+    private void serializeShowItem(HoverEvent.ShowItem item, NBTWriter child, boolean modern) {
+        Key itemId = item.item();
+        int count = item.count();
+        BinaryTagHolder nbt = item.nbt();
+        boolean emptyComps = item.dataComponents().isEmpty();
+
+        // "modern" item stacks are no longer allowed to be inlined
+        if (!modern && count == 1 && nbt == null && emptyComps) {
+            child.writeUTF("contents", itemId.asString());
+            return;
+        }
+
+        NBTWriter itemNBT = modern ? child : child.child("contents");
+        itemNBT.writeUTF("id", itemId.asString());
+        if (!modern || count != 1) {
+            itemNBT.writeInt("count", count);
+        }
+        if (nbt != null) {
+            itemNBT.writeUTF("tag", nbt.string());
+        }
+        if (emptyComps) {
+            return;
+        }
+
+        NBTWriter compsNbt = itemNBT.child("components");
+        for (Map.Entry<Key, DataComponentValue> entry : item.dataComponents().entrySet()) {
+            String key = entry.getKey().toString();
+            DataComponentValue value = entry.getValue();
+            if (value == DataComponentValue.removed()) {
+                // I don't think value matters here
+                compsNbt.writeCompound("!" + key, new NBTCompound());
+                continue;
+            }
+            switch (value) {
+                case NbtTagHolder holder -> compsNbt.write(key, holder.getTag());
+                case DataComponentValue.TagSerializable tagSerializable ->
+                        compsNbt.write(key, AdventureNbtUtil.fromString(tagSerializable.asBinaryTag().string()));
+                case GsonDataComponentValue gsonValue -> {
+                    // there is no way to recover 100% of the actual information
+                    // without implementing JSON data serialization for every
+                    // available component
+                    JsonElement element = gsonValue.element();
+                    compsNbt.write(key, NBTCodec.jsonToNBT(element));
+                }
+                default -> {
+                    // else: unsupported entry component value, skip
+                }
+            }
+        }
     }
     // -------------------------------------------------
 
@@ -735,8 +705,8 @@ public class AdventureNBTSerializer implements ComponentSerializer<Component, Co
 
     @SuppressWarnings("ConstantConditions")
     private @NotNull String serializeColor(final @NotNull TextColor value) {
-        if (value instanceof NamedTextColor) {
-            return NamedTextColor.NAMES.key((NamedTextColor) value);
+        if (value instanceof NamedTextColor named) {
+            return NamedTextColor.NAMES.key(named);
         } else if (this.downsampleColor) {
             return NamedTextColor.NAMES.key(NamedTextColor.nearestTo(value));
         } else {
@@ -747,7 +717,7 @@ public class AdventureNBTSerializer implements ComponentSerializer<Component, Co
 
     // ---------------- Component List -----------------
     private @NotNull List<Component> deserializeComponentList(List<?> value, PacketWrapper<?> wrapper) {
-        if (value.isEmpty()) return Collections.emptyList();
+        if (value.isEmpty()) return List.of();
 
         List<Component> components = new ArrayList<>(value.size());
         for (Object nbt : value) {
@@ -768,19 +738,16 @@ public class AdventureNBTSerializer implements ComponentSerializer<Component, Co
 
     // ------------ TranslationArgument List ------------
     private @NotNull List<TranslationArgument> deserializeTranslationArgumentList(List<?> value, PacketWrapper<?> wrapper) {
-        if (value.isEmpty()) return Collections.emptyList();
+        if (value.isEmpty()) return List.of();
 
         List<TranslationArgument> arguments = new ArrayList<>(value.size());
         for (Object nbt : value) {
-            if (nbt instanceof NBTByte) {
-                arguments.add(TranslationArgument.bool(((NBTByte) nbt).getAsByte() != (byte) 0));
-            } else if (nbt instanceof NBTNumber) {
-                arguments.add(TranslationArgument.numeric(((NBTNumber) nbt).getAsNumber()));
-            } else if (nbt instanceof NBTString) {
-                arguments.add(TranslationArgument.component(Component.text(((NBTString) nbt).getValue())));
-            } else {
-                arguments.add(TranslationArgument.component(this.deserialize(requireType((NBT) nbt, NBTType.COMPOUND), wrapper)));
-            }
+            arguments.add(switch (nbt) {
+                case NBTByte bool -> TranslationArgument.bool(bool.getAsByte() != (byte) 0);
+                case NBTNumber number -> TranslationArgument.numeric(number.getAsNumber());
+                case NBTString string -> TranslationArgument.component(Component.text(string.getValue()));
+                default -> TranslationArgument.component(this.deserialize(requireType((NBT) nbt, NBTType.COMPOUND), wrapper));
+            });
         }
 
         return arguments;
@@ -815,8 +782,8 @@ public class AdventureNBTSerializer implements ComponentSerializer<Component, Co
 
         public void useNumber(String key, Consumer<Number> consumer) {
             useTag(key, tag -> {
-                if (tag instanceof NBTNumber) {
-                    consumer.accept(((NBTNumber) tag).getAsNumber());
+                if (tag instanceof NBTNumber number) {
+                    consumer.accept(number.getAsNumber());
                 } else {
                     throw new IllegalArgumentException("Expected number but got " + tag.getType());
                 }
@@ -825,8 +792,8 @@ public class AdventureNBTSerializer implements ComponentSerializer<Component, Co
 
         public <R> R readNumber(String key, Function<Number, R> function) {
             return withTag(key, tag -> {
-                if (tag instanceof NBTNumber) {
-                    return function.apply(((NBTNumber) tag).getAsNumber());
+                if (tag instanceof NBTNumber number) {
+                    return function.apply(number.getAsNumber());
                 } else {
                     throw new IllegalArgumentException("Expected number but got " + tag.getType());
                 }
@@ -849,7 +816,7 @@ public class AdventureNBTSerializer implements ComponentSerializer<Component, Co
         public @Nullable Number getNumber(String key) {
             NBT tag = compound.getTagOrNull(key);
             if (tag == null) return null;
-            if (tag instanceof NBTNumber) return ((NBTNumber) tag).getAsNumber();
+            if (tag instanceof NBTNumber number) return number.getAsNumber();
             throw new IllegalArgumentException("Expected number but got " + tag.getType());
         }
 
