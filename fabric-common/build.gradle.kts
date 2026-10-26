@@ -1,44 +1,36 @@
-/*
- * This file is part of packetevents - https://github.com/retrooper/packetevents
- * Copyright (C) 2026 retrooper and contributors
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 plugins {
     packetevents.`library-conventions`
 }
 
 repositories {
     maven("https://maven.fabricmc.net/")
+    maven("https://repo.viaversion.com/")
+    maven("https://repo.spongepowered.org/repository/maven-public/")
+    maven("https://jitpack.io")
 }
 
 dependencies {
-    api(libs.bundles.adventure)
-    api(project(":api"))
-    api(project(":netty-common"))
+    compileOnly(libs.bundles.adventure)
+    compileOnly(project(":api", "shadow"))
+    compileOnly(project(":netty-common"))
 
-    compileOnly(libs.fabric.loader)
-    compileOnly(libs.slf4j.api)
+    compileOnly("net.fabricmc:fabric-loader:${rootProject.findProperty("loader_version") ?: "0.16.14"}")
+    compileOnly(libs.via.version)
+    compileOnly("org.slf4j:slf4j-api:2.0.16")
+    compileOnly(libs.log4j.api)
+    // PacketEventsMixinManager extends a conditional-mixin base class, which itself
+    // extends Sponge Mixin's IMixinConfigPlugin.
+    compileOnly("com.github.Fallen-Breath.conditional-mixin:conditional-mixin-fabric:0.6.4")
+    compileOnly("org.spongepowered:mixin:0.8.7")
 }
 
+// Override library-conventions' release=8: bridge code uses switch expressions
+// and pattern-matching instanceof.
 tasks.withType<JavaCompile> {
     options.release = 21
 }
 
 java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }

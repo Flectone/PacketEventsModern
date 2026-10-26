@@ -21,6 +21,7 @@ package io.github.retrooper.packetevents.handler;
 import com.github.retrooper.packetevents.protocol.PacketSide;
 import com.github.retrooper.packetevents.protocol.player.User;
 import com.github.retrooper.packetevents.util.PacketEventsImplHelper;
+import io.github.retrooper.packetevents.util.NeoforgeUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
@@ -53,5 +54,19 @@ public class PacketDecoder extends MessageToMessageDecoder<ByteBuf> {
         if (msg.isReadable()) {
             out.add(msg.retain());
         }
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        boolean kryptonReorder = false;
+        switch (evt.toString()) {
+            case "COMPRESSION_THRESHOLD_UPDATED":
+            case "COMPRESSION_ENABLED":
+                kryptonReorder = true;
+        }
+        if (kryptonReorder) {
+            NeoforgeUtil.reorderHandlers(ctx.pipeline());
+        }
+        super.userEventTriggered(ctx, evt);
     }
 }

@@ -33,7 +33,7 @@ base {
 }
 
 neoForge {
-    version = libs.versions.neoforge.get()
+    version = providers.gradleProperty("neoforge_version").getOrElse(libs.versions.neoforge.get())
 
     runs {
         register("client") {
@@ -70,5 +70,5 @@ java {
 }
 
 tasks.withType<JavaCompile> {
-    options.release = 25
+    options.release = 21
 }

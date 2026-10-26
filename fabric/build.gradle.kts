@@ -1,45 +1,73 @@
-/*
- * This file is part of packetevents - https://github.com/retrooper/packetevents
- * Copyright (C) 2026 retrooper and contributors
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+
+// Aggregator: JiJ-nests fabric-intermediary + fabric-official + fabric-common into the
+// published packetevents-fabric jar. Fabric Loader gates each nested variant by its
+// declared minecraft range at runtime.
 
 plugins {
     packetevents.`library-conventions`
-    packetevents.`publish-conventions`
-    net.fabricmc.`fabric-loom`
+    net.fabricmc.`fabric-loom-remap`
 }
 
+repositories {
+    mavenCentral()
+    maven("https://repo.viaversion.com/")
+    maven("https://jitpack.io") // Conditional Mixin
+}
+
+val minecraft_version: String by project
+val yarn_mappings: String by project
+val loader_version: String by project
+
 dependencies {
-    // include dependencies
+    // Floor at oldest supported MC so Loom remap accepts 1.16.1.
+    minecraft("com.mojang:minecraft:$minecraft_version")
+    mappings("net.fabricmc:yarn:$yarn_mappings")
+    modImplementation("net.fabricmc:fabric-loader:$loader_version")
+
+    // api(): re-export so consumers' POMs see them transitively.
+    // include(): JiJ at runtime. Both are needed.
+    api(project(":fabric-common"))
+    api(libs.bundles.adventure)
+    api(project(":api", "shadow"))
+    api(project(":netty-common"))
+
+    include(project(":fabric-common"))
     include(libs.bundles.adventure)
     api(libs.adventure.text.logger.slf4j)
     include(libs.adventure.text.logger.slf4j)
     include(project(":api", "shadow"))
     include(project(":netty-common"))
-
-    // include fabric-specific modules
-    include(project(":fabric-common"))
-    include(project(":fabric-official"))
-    include(project(":fabric-intermediary"))
-
-    // dummy dependency
-    minecraft(libs.fabric.minecraft.official)
+    // Hoisted from variant modules to avoid duplicating the 28KB JiJ.
+    include("com.github.Fallen-Breath.conditional-mixin:conditional-mixin-fabric:0.6.4")
 }
+
+loom {
+    mods {
+        register("packetevents") {
+            sourceSet(sourceSets.main.get())
+        }
+    }
+}
+
 tasks {
-    named<Jar>("jar") {
+    withType<JavaCompile> {
+        options.release = 21
+    }
+
+    remapJar {
         destinationDirectory = rootProject.layout.buildDirectory.dir("libs")
+        archiveBaseName = "${rootProject.name}-fabric"
+        archiveVersion = rootProject.ext["versionNoHash"] as String
+
+        // Nest via file path (not project deps) to skip variant project configuration,
+        // which would otherwise inject dev/namedElements jars into `include`.
+        // intermediary → remapJar (LoomRemap); official → jar (LoomNoRemap).
+        dependsOn(":fabric-intermediary:remapJar", ":fabric-official:jar")
+        nestedJars.from(
+            rootProject.layout.buildDirectory.file("libs/${rootProject.name}-fabric-intermediary-${rootProject.ext["versionNoHash"]}.jar")
+        )
+        nestedJars.from(
+            rootProject.layout.buildDirectory.file("libs/${rootProject.name}-fabric-official-${rootProject.ext["versionNoHash"]}.jar")
+        )
     }
 }

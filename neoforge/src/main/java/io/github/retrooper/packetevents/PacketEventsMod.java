@@ -25,11 +25,10 @@ import io.github.retrooper.packetevents.factory.neoforge.NeoForgePacketEventsAPI
 import io.github.retrooper.packetevents.factory.neoforge.NeoForgePlayerManager;
 import io.github.retrooper.packetevents.factory.neoforge.NeoForgeServerManager;
 import io.github.retrooper.packetevents.impl.netty.manager.player.PlayerManagerAbstract;
-import net.minecraft.SharedConstants;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.loading.FMLLoader;
+import net.neoforged.fml.ModList;
 import org.jspecify.annotations.NullMarked;
 
 @NullMarked
@@ -38,14 +37,13 @@ public class PacketEventsMod {
 
     public static final String MOD_ID = "packetevents";
 
-    public PacketEventsMod(IEventBus modBus) {
-        Dist dist = FMLLoader.getCurrent().getDist();
-
+    public PacketEventsMod(IEventBus modBus, Dist dist) {
         NeoForgePacketEventsAPI api = new NeoForgePacketEventsAPI(MOD_ID, dist) {
             @Override
             protected ServerManager constructServerManager() {
-                SharedConstants.tryDetectVersion();
-                String mcVersion = SharedConstants.getCurrentVersion().id();
+                String mcVersion = ModList.get().getModContainerById("minecraft")
+                        .map(container -> container.getModInfo().getVersion().toString())
+                        .orElseThrow();
                 return new NeoForgeServerManager(mcVersion);
             }
 

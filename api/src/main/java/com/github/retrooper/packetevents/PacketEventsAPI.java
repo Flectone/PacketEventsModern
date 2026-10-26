@@ -23,8 +23,11 @@ import com.github.retrooper.packetevents.injector.ChannelInjector;
 import com.github.retrooper.packetevents.manager.InternalPacketListener;
 import com.github.retrooper.packetevents.manager.player.PlayerManager;
 import com.github.retrooper.packetevents.manager.protocol.ProtocolManager;
+import com.github.retrooper.packetevents.manager.registry.ItemRegistry;
+import com.github.retrooper.packetevents.manager.registry.RegistryManager;
 import com.github.retrooper.packetevents.manager.server.ServerManager;
 import com.github.retrooper.packetevents.netty.NettyManager;
+import com.github.retrooper.packetevents.protocol.item.type.ItemType;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState;
 import com.github.retrooper.packetevents.settings.PacketEventsSettings;
@@ -35,6 +38,8 @@ import com.github.retrooper.packetevents.util.PEVersions;
 import com.github.retrooper.packetevents.util.adventure.AdventureConversionInjector;
 import com.github.retrooper.packetevents.util.mappings.SynchronizedRegistriesHandler;
 import com.github.retrooper.packetevents.util.updatechecker.UpdateChecker;
+
+import org.jetbrains.annotations.Nullable;
 
 import java.util.logging.Logger;
 
@@ -117,4 +122,23 @@ public abstract class PacketEventsAPI<T> {
     public abstract NettyManager getNettyManager();
 
     public abstract ChannelInjector getInjector();
+
+    public RegistryManager getRegistryManager() {
+        return new RegistryManager() {
+            @Override
+            public ItemRegistry getItemRegistry() {
+                return new ItemRegistry() {
+                    @Override
+                    public @Nullable ItemType getByName(String name) {
+                        return null;
+                    }
+
+                    @Override
+                    public @Nullable ItemType getById(int id) {
+                        return null;
+                    }
+                };
+            }
+        };
+    }
 }

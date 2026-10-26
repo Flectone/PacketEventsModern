@@ -16,24 +16,18 @@
   "icon": "assets/packetevents/icon.png",
   "environment": "*",
   "entrypoints": {
-    "pePreLaunchClient": [
-      "io.github.retrooper.packetevents.PacketEventsClientMod"
+    "preLaunch": [
+      "io.github.retrooper.packetevents.PacketEventsMod"
     ],
-    "pePreLaunchServer": [
-      "io.github.retrooper.packetevents.PacketEventsServerMod"
+    "main": [
+      "io.github.retrooper.packetevents.PacketEventsMod"
     ]
   },
-  "mixins": [
-    "packetevents.mixins.json"
-  ],
-  "accessWidener": "packetevents.accesswidener",
   "depends": {
-    "fabricloader": ">=0.15.11",
-    "minecraft": ">1.21.11",
+    "minecraft": ">=26.1.2 <26.4",
     "java": ">=25",
-    "packetevents-fabric-common": "*"
+    "fabricloader": ">=0.19"
   },
-
   "custom": {
     "modmenu": {
       "badges": [
@@ -45,7 +39,6 @@
         "modmenu.github_releases": "https://github.com/retrooper/packetevents/releases",
         "modmenu.modrinth": "https://modrinth.com/mod/packetevents"
       },
-      "parent": "packetevents-fabric-common",
       "update_checker": false
     }
   }
