@@ -14,7 +14,7 @@ repositories {
     maven("https://repo.viaversion.com/")
 }
 
-val spongeVersion: String = "17.0.0-SNAPSHOT"
+val spongeVersion: String = "17.0.0"
 
 sponge {
     apiVersion(spongeVersion)
