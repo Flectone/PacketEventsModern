@@ -27,6 +27,12 @@ tasks {
             exclude(dependency("com.google.code.gson:gson:.*"))
         }
 
+        exclude {
+            it.path.startsWith("net/kyori/")
+                    && !it.path.startsWith("net/kyori/adventure/text/serializer/")
+                    && !it.path.startsWith("net/kyori/option/")
+        }
+
         mergeServiceFiles()
     }
 

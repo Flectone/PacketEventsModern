@@ -53,7 +53,7 @@ neoForge {
 
 dependencies {
     // include dependencies
-    shadow(libs.bundles.adventure)
+    compileOnly(libs.bundles.adventure)
     api(libs.adventure.text.logger.slf4j)
     shadow(project(":api", "shadow"))
     shadow(project(":netty-common"))

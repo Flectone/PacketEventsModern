@@ -32,9 +32,7 @@ dependencies {
     api(project(":netty-common"))
 
     include(project(":fabric-common"))
-    include(libs.bundles.adventure)
     api(libs.adventure.text.logger.slf4j)
-    include(libs.adventure.text.logger.slf4j)
     include(project(":api", "shadow"))
     include(project(":netty-common"))
     // Hoisted from variant modules to avoid duplicating the 28KB JiJ.

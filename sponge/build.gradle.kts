@@ -87,7 +87,7 @@ tasks {
 
 dependencies {
     compileOnly(libs.netty)
-    shadow(libs.adventure.nbt) {
+    compileOnly(libs.adventure.nbt) {
         isTransitive = false
     }
     shadow(project(":api", "shadow")) {
