@@ -54,8 +54,25 @@ public final class Attributes {
         return REGISTRY.getByName(normedName);
     }
 
+    public static Attribute getByNameOrCreate(String name) {
+        Attribute attribute = getByName(name);
+        if (attribute != null) {
+            return attribute;
+        }
+        String normedName = ResourceLocation.normString(name);
+        return new StaticAttribute(new ResourceLocation(normedName), 0d, -Double.MAX_VALUE, Double.MAX_VALUE);
+    }
+
     public static Attribute getById(ClientVersion version, int id) {
         return REGISTRY.getById(version, id);
+    }
+
+    public static Attribute getByIdOrCreate(ClientVersion version, int id) {
+        Attribute attribute = getById(version, id);
+        if (attribute != null) {
+            return attribute;
+        }
+        return new StaticAttribute(id, 0d, -Double.MAX_VALUE, Double.MAX_VALUE);
     }
 
     public static final Attribute ARMOR = define("armor",

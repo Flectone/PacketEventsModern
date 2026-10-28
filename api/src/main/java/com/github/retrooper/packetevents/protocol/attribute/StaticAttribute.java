@@ -25,12 +25,35 @@ import com.github.retrooper.packetevents.util.mappings.TypesBuilderData;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
+
 public class StaticAttribute extends AbstractMappedEntity implements Attribute {
 
     private final @Nullable ResourceLocation legacyName;
+    private final int unregisteredId;
     private final double defaultValue;
     private final double minValue;
     private final double maxValue;
+
+    /** Unregistered attribute that keeps its name. */
+    public StaticAttribute(ResourceLocation name, double defaultValue, double minValue, double maxValue) {
+        super(null);
+        this.legacyName = name;
+        this.unregisteredId = -1;
+        this.defaultValue = defaultValue;
+        this.minValue = minValue;
+        this.maxValue = maxValue;
+    }
+
+    /** Unregistered attribute that keeps its id. */
+    public StaticAttribute(int id, double defaultValue, double minValue, double maxValue) {
+        super(null);
+        this.legacyName = new ResourceLocation("packetevents", "unknown_" + id);
+        this.unregisteredId = id;
+        this.defaultValue = defaultValue;
+        this.minValue = minValue;
+        this.maxValue = maxValue;
+    }
 
     @ApiStatus.Internal
     public StaticAttribute(
@@ -38,6 +61,7 @@ public class StaticAttribute extends AbstractMappedEntity implements Attribute {
             double defaultValue, double minValue, double maxValue
     ) {
         super(data);
+        this.unregisteredId = -1;
         this.defaultValue = defaultValue;
         this.minValue = minValue;
         this.maxValue = maxValue;
@@ -48,10 +72,49 @@ public class StaticAttribute extends AbstractMappedEntity implements Attribute {
     @Override
     public ResourceLocation getName(ClientVersion version) {
         if (this.data == null) {
+            // custom attribute, name kept in legacyName
+            if (this.legacyName != null) {
+                return this.legacyName;
+            }
             throw new UnsupportedOperationException();
         }
         return version.isNewerThanOrEquals(ClientVersion.V_1_21_2) || this.legacyName == null
                 ? this.data.getName() : this.legacyName;
+    }
+
+    @Override
+    public ResourceLocation getName() {
+        if (this.data == null && this.legacyName != null) {
+            return this.legacyName;
+        }
+        return super.getName();
+    }
+
+    @Override
+    public int getId(ClientVersion version) {
+        if (this.data == null && this.unregisteredId >= 0) {
+            return this.unregisteredId;
+        }
+        return super.getId(version);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this.data == null && this.legacyName != null) {
+            if (this == obj) return true;
+            if (!(obj instanceof StaticAttribute)) return false;
+            StaticAttribute that = (StaticAttribute) obj;
+            return that.data == null && this.legacyName.equals(that.legacyName);
+        }
+        return super.equals(obj);
+    }
+
+    @Override
+    public int hashCode() {
+        if (this.data == null && this.legacyName != null) {
+            return Objects.hash(StaticAttribute.class, this.legacyName);
+        }
+        return super.hashCode();
     }
 
     @Override

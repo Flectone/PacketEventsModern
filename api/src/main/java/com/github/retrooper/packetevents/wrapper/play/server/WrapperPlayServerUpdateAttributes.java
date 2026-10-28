@@ -102,9 +102,10 @@ public class WrapperPlayServerUpdateAttributes extends PacketWrapper<WrapperPlay
         for (int i = 0; i < propertyCount; i++) {
             Attribute attribute;
             if (this.serverVersion.isNewerThanOrEquals(ServerVersion.V_1_20_5)) {
-                attribute = this.readMappedEntity(Attributes::getById);
+                attribute = Attributes.getByIdOrCreate(this.serverVersion.toClientVersion(), this.readVarInt());
             } else if (this.serverVersion.isNewerThanOrEquals(ServerVersion.V_1_16)) {
-                attribute = Attributes.getByName(this.readIdentifier().toString());
+                // custom / unknown attributes must round-trip (#1555)
+                attribute = Attributes.getByNameOrCreate(this.readIdentifier().toString());
             } else {
                 String attributeName = this.readString(64);
                 attribute = PRE_1_16_ATTRIBUTES_MAP.get(attributeName);
@@ -297,7 +298,7 @@ public class WrapperPlayServerUpdateAttributes extends PacketWrapper<WrapperPlay
 
         @Deprecated
         public Property(String key, double value, List<PropertyModifier> modifiers) {
-            this(Attributes.getByName(key), value, modifiers);
+            this(Attributes.getByNameOrCreate(key), value, modifiers);
         }
 
         public Property(Attribute attribute, double value, List<PropertyModifier> modifiers) {
@@ -349,7 +350,7 @@ public class WrapperPlayServerUpdateAttributes extends PacketWrapper<WrapperPlay
 
         @Deprecated
         public void setKey(String key) {
-            this.setAttribute(Attributes.getByName(key));
+            this.setAttribute(Attributes.getByNameOrCreate(key));
         }
 
         public double getValue() {
