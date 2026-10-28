@@ -21,6 +21,12 @@ repositories {
 
 val isShadow = project.pluginManager.hasPlugin("com.gradleup.shadow")
 
+if (isShadow) {
+    val javaComponent = components["java"] as AdhocComponentWithVariants
+    javaComponent.withVariantsFromConfiguration(configurations["apiElements"]) { skip() }
+    javaComponent.withVariantsFromConfiguration(configurations["runtimeElements"]) { skip() }
+}
+
 dependencies {
     compileOnly("org.jetbrains:annotations:23.0.0")
 }
