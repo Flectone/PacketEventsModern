@@ -213,7 +213,14 @@ final class StyleSerializer extends TypeAdapter<Style> {
                 if (action != null && action.readable()) {
                     switch (action) {
                         case ClickEvent.Action.OpenUrl ignored -> {
-                            if (value != null) style.clickEvent(ClickEvent.openUrl(value));
+                            // packetevents patch start
+                            if (value != null) {
+                                try {
+                                    style.clickEvent(ClickEvent.openUrl(value));
+                                } catch (IllegalArgumentException ignoredException) {
+                                }
+                            }
+                            // packetevents patch end
                         }
                         case ClickEvent.Action.RunCommand ignored -> {
                             if (value != null) style.clickEvent(ClickEvent.runCommand(value));

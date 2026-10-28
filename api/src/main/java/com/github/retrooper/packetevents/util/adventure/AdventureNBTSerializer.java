@@ -459,7 +459,13 @@ public class AdventureNBTSerializer implements ComponentSerializer<Component, Co
         if (clickEvent != null) {
             ClickEvent.Action<?> action = clickEvent.readUTF("action", ClickEvent.Action.NAMES::value);
             ClickEvent<?> value = switch (action.name()) {
-                case "open_url" -> ClickEvent.openUrl(clickEvent.readUTF(modernEvents ? "url" : "value", Function.identity()));
+                case "open_url" -> {
+                    try {
+                        yield ClickEvent.openUrl(clickEvent.readUTF(modernEvents ? "url" : "value", Function.identity()));
+                    } catch (IllegalArgumentException ignored) {
+                        yield null;
+                    }
+                }
                 case "open_file" -> ClickEvent.openFile(clickEvent.readUTF(modernEvents ? "path" : "value", Function.identity()));
                 case "run_command" -> ClickEvent.runCommand(clickEvent.readUTF(modernEvents ? "command" : "value", Function.identity()));
                 case "suggest_command" -> ClickEvent.suggestCommand(clickEvent.readUTF(modernEvents ? "command" : "value", Function.identity()));
