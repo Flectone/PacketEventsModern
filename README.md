@@ -1,40 +1,49 @@
 <!--suppress HtmlDeprecatedAttribute -->
 <div align="center">
-    <h2><i>PacketEvents</i></h2>
-    <h3>PacketEvents is a protocol library tailored to Minecraft Java Edition, designed to facilitate the processing and transmission of packets.</h3>
-    <a href="https://github.com/retrooper/packetevents/actions"><img src="https://img.shields.io/github/actions/workflow/status/retrooper/packetevents/gradle-publish.yml?style=for-the-badge&logo=github"></a>
-    <a href="https://discord.gg/DVHxPPxHZc"><img src="https://img.shields.io/discord/721686193061888071?color=5562e9&logo=discord&logoColor=white&style=for-the-badge"></a>
-    <img src="https://img.shields.io/github/license/retrooper/packetevents?style=for-the-badge&logo=github">
-    <a href="https://bstats.org/plugin/bukkit/packetevents/11327"><img src="https://img.shields.io/bstats/servers/11327?style=for-the-badge"></a>
-    <a href="https://github.com/retrooper/packetevents/releases"><img src="https://img.shields.io/github/downloads/retrooper/packetevents/total.svg?style=for-the-badge&logo=github"></a>
+    <h2><i>PacketEventsModern (PEM)</i></h2>
+    <h3>PacketEventsModern is a fork of <a href="https://github.com/retrooper/packetevents">PacketEvents</a>, a protocol library tailored to Minecraft Java Edition, kept up to date with modern platforms and libraries.</h3>
+    <a href="https://github.com/Flectone/PacketEventsModern/actions"><img src="https://img.shields.io/github/actions/workflow/status/Flectone/PacketEventsModern/gradle-publish.yml?style=for-the-badge&logo=github"></a>
+    <a href="https://central.sonatype.com/namespace/net.flectone"><img src="https://img.shields.io/maven-central/v/net.flectone/packeteventsmodern-api?style=for-the-badge"></a>
+    <img src="https://img.shields.io/github/license/Flectone/PacketEventsModern?style=for-the-badge&logo=github">
 </div>
+<h3>What's different</h3>
+
+- Adventure 5.x, Java 21
+- Adventure is not shaded, the platform provides it
+- NeoForge platform support from 1.21.1 to latest
+- Fabric from 1.14 to latest in one jar (intermediary and official mappings)
+- Published to Maven Central as `net.flectone:packeteventsmodern-*`
+
+The API and packages are the same as in PacketEvents, so the [original documentation](https://docs.packetevents.com/) still applies.
+
+<h3>Usage</h3>
+
+```groovy
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly "net.flectone:packeteventsmodern-spigot:2.14.2"
+}
+```
+
 <h3>Resources</h3>
 
-- [Read documentation](https://docs.packetevents.com/)
+- [PacketEvents documentation](https://docs.packetevents.com/)
     - [Getting Started](https://docs.packetevents.com/development-setup)
     - [JavaDocs](https://javadocs.packetevents.com)
-- [Releases](https://github.com/retrooper/packetevents/releases/)
-    - [Modrinth](https://modrinth.com/plugin/packetevents)
-    - [GitHub](https://github.com/retrooper/packetevents/releases/)
-    - [SpigotMC](https://www.spigotmc.org/resources/packetevents-api.80279/)
-- [Development Builds](https://ci.codemc.io/job/retrooper/job/packetevents)
-- [Statistics](https://bstats.org/plugin/bukkit/packetevents/11327)
-
-<h3>Sponsors</h3>
-
-<i>Thanks to the following sponsors for supporting this project:</i>
-
-<a href="https://pebblehost.com"><img src="https://pebblehost.com/src/img/logos/main-old.png" width=150><br>
-
-<a href="https://www.ej-technologies.com"><img src="https://www.ej-technologies.com/images/product_banners/jprofiler_small.png"><br>
+- [Releases](https://github.com/Flectone/PacketEventsModern/releases/)
+- [Maven Central](https://central.sonatype.com/namespace/net.flectone)
 
 <h3>Credits</h3>
 
-<i>Here are some projects that we are heavily inspired by, thus we have integrated</i>\
-<i>small portions of their code into our work.</i>
+<i>All credit for the original library goes to retrooper and the PacketEvents contributors.</i>
 
+[PacketEvents](https://github.com/retrooper/packetevents)\
+[Grim's PacketEvents fork](https://github.com/GrimAnticheat/packetevents)\
 [Protocol Documentation for the Minecraft Java Edition](https://minecraft.wiki/w/Minecraft_Wiki:Projects/wiki.vg_merge/Protocol)\
 [ViaVersion](https://github.com/ViaVersion/ViaVersion)\
 [ProtocolSupport](https://github.com/ProtocolSupport/ProtocolSupport)\
 [adventure](https://github.com/KyoriPowered/adventure)\
-[MCProtocolLib](https://github.com/GeyserMC/MCProtocolLib/)  
+[MCProtocolLib](https://github.com/GeyserMC/MCProtocolLib/)
