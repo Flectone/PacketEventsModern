@@ -90,6 +90,10 @@ tasks {
     tasks.findByName("javadoc")?.enabled = false
     tasks.findByName("javadocJar")?.enabled = false
 
+    withType<GenerateModuleMetadata> {
+        enabled = false
+    }
+
     defaultTasks("build")
 }
 
